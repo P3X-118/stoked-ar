@@ -1,0 +1,19 @@
+rtc:
+  use_external_ip: true
+  port_range_start: {{ stoked_livekit_udp_port_start }}
+  port_range_end: {{ stoked_livekit_udp_port_end }}
+  tcp_port: {{ stoked_livekit_tcp_port }}
+
+redis:
+  address: {{ stoked_redis_identifier }}:6379
+
+turn:
+  enabled: false
+
+keys:
+  {{ stoked_effective_livekit_key }}: {{ stoked_effective_livekit_secret }}
+
+webhook:
+  api_key: {{ stoked_effective_livekit_key }}
+  urls:
+  - "http://{{ stoked_voice_ingress_identifier }}:8500/worldwide"

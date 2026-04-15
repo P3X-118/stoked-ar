@@ -1,0 +1,33 @@
+[Unit]
+Description=Stoked RabbitMQ ({{ stoked_rabbitmq_identifier }})
+{% for service in stoked_rabbitmq_systemd_required_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Environment="HOME={{ sysd_docker_unit_home_path }}"
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_rabbitmq_identifier }} 2>/dev/null || true'
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_rabbitmq_identifier }} 2>/dev/null || true'
+
+ExecStartPre={{ sysd_docker_host_command }} create \
+                --rm \
+                --name={{ stoked_rabbitmq_identifier }} \
+                --log-driver=none \
+                --network={{ stoked_rabbitmq_container_network }} \
+                --env-file={{ stoked_rabbitmq_base_path }}/env \
+                --mount type=bind,src={{ stoked_rabbitmq_data_path }},dst=/var/lib/rabbitmq \
+                {{ stoked_rabbitmq_container_image }}
+
+ExecStart={{ sysd_docker_host_command }} start --attach {{ stoked_rabbitmq_identifier }}
+
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_rabbitmq_identifier }} 2>/dev/null || true'
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_rabbitmq_identifier }} 2>/dev/null || true'
+Restart=always
+RestartSec=30
+SyslogIdentifier={{ stoked_rabbitmq_identifier }}
+
+[Install]
+WantedBy=multi-user.target

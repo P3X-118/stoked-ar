@@ -1,0 +1,469 @@
+---
+
+########################################################################
+# Common
+########################################################################
+
+stoked_enabled: true
+
+stoked_identifier: stoked
+
+stoked_base_path: "/{{ stoked_identifier }}"
+
+stoked_version: sgc
+
+stoked_uid: ""
+stoked_gid: ""
+
+stoked_scheme: https
+stoked_hostname: ""
+
+stoked_video_enabled: true
+
+########################################################################
+# Secrets
+########################################################################
+
+# VAPID keys (generated at install time if empty, persisted to disk)
+stoked_vapid_private_key: ""
+stoked_vapid_public_key: ""
+
+# Files encryption key (base64-encoded 32 bytes)
+stoked_files_encryption_key: ""
+
+# LiveKit key/secret pair
+stoked_livekit_key: ""
+stoked_livekit_secret: ""
+
+########################################################################
+# Network
+########################################################################
+
+stoked_container_network: "{{ stoked_identifier }}"
+
+########################################################################
+# MongoDB (internal)
+########################################################################
+
+stoked_mongodb_enabled: true
+stoked_mongodb_identifier: "{{ stoked_identifier }}-mongodb"
+stoked_mongodb_base_path: "{{ stoked_base_path }}/mongodb"
+stoked_mongodb_data_path: "{{ stoked_mongodb_base_path }}/data"
+stoked_mongodb_container_image: "docker.io/mongo"
+stoked_mongodb_container_image_force_pull: false
+stoked_mongodb_container_network: "{{ stoked_container_network }}"
+stoked_mongodb_hostname: "{{ stoked_mongodb_identifier }}"
+
+stoked_mongodb_systemd_required_services_list:
+  - "{{ sysd_docker_service }}"
+
+########################################################################
+# Redis/KeyDB (internal)
+########################################################################
+
+stoked_redis_enabled: true
+stoked_redis_identifier: "{{ stoked_identifier }}-redis"
+stoked_redis_base_path: "{{ stoked_base_path }}/redis"
+stoked_redis_container_image: "docker.io/eqalpha/keydb"
+stoked_redis_container_image_force_pull: false
+stoked_redis_container_network: "{{ stoked_container_network }}"
+stoked_redis_hostname: "{{ stoked_redis_identifier }}"
+
+stoked_redis_systemd_required_services_list:
+  - "{{ sysd_docker_service }}"
+
+########################################################################
+# RabbitMQ (internal)
+########################################################################
+
+stoked_rabbitmq_enabled: true
+stoked_rabbitmq_identifier: "{{ stoked_identifier }}-rabbitmq"
+stoked_rabbitmq_base_path: "{{ stoked_base_path }}/rabbitmq"
+stoked_rabbitmq_data_path: "{{ stoked_rabbitmq_base_path }}/data"
+stoked_rabbitmq_container_image: "docker.io/rabbitmq:4"
+stoked_rabbitmq_container_image_force_pull: false
+stoked_rabbitmq_container_network: "{{ stoked_container_network }}"
+stoked_rabbitmq_hostname: "{{ stoked_rabbitmq_identifier }}"
+stoked_rabbitmq_user: "rabbituser"
+stoked_rabbitmq_password: "rabbitpass"
+
+stoked_rabbitmq_systemd_required_services_list:
+  - "{{ sysd_docker_service }}"
+
+########################################################################
+# MinIO (internal)
+########################################################################
+
+stoked_minio_enabled: true
+stoked_minio_identifier: "{{ stoked_identifier }}-minio"
+stoked_minio_base_path: "{{ stoked_base_path }}/minio"
+stoked_minio_data_path: "{{ stoked_minio_base_path }}/data"
+stoked_minio_container_image: "docker.io/minio/minio"
+stoked_minio_container_image_force_pull: false
+stoked_minio_container_network: "{{ stoked_container_network }}"
+stoked_minio_hostname: "{{ stoked_minio_identifier }}"
+stoked_minio_root_user: "minioautumn"
+stoked_minio_root_password: "minioautumn"
+stoked_minio_bucket_name: "revolt-uploads"
+
+stoked_minio_systemd_required_services_list:
+  - "{{ sysd_docker_service }}"
+
+########################################################################
+# createbuckets (one-shot init)
+########################################################################
+
+stoked_createbuckets_identifier: "{{ stoked_identifier }}-createbuckets"
+stoked_createbuckets_container_image: "docker.io/minio/mc"
+
+########################################################################
+# API (delta) -- /api
+########################################################################
+
+stoked_api_enabled: true
+stoked_api_identifier: "{{ stoked_identifier }}-api"
+stoked_api_base_path: "{{ stoked_base_path }}/api"
+stoked_api_container_image: "docker.io/legitservices/stoked-api:{{ stoked_version }}"
+stoked_api_container_image_force_pull: "{{ stoked_api_container_image.endswith(':latest') }}"
+stoked_api_container_network: "{{ stoked_container_network }}"
+stoked_api_http_port: 14702
+
+stoked_api_container_additional_networks: "{{ stoked_api_container_additional_networks_default + stoked_api_container_additional_networks_auto + stoked_api_container_additional_networks_custom }}"
+stoked_api_container_additional_networks_default: []
+stoked_api_container_additional_networks_auto: []
+stoked_api_container_additional_networks_custom: []
+
+stoked_api_container_labels_traefik_enabled: true
+stoked_api_container_labels_traefik_docker_network: ""
+stoked_api_container_labels_traefik_rule: "Host(`{{ stoked_hostname }}`) && PathPrefix(`/api`)"
+stoked_api_container_labels_traefik_priority: 0
+stoked_api_container_labels_traefik_entrypoints: web-secure
+stoked_api_container_labels_traefik_tls: true
+stoked_api_container_labels_traefik_tls_certResolver: default
+stoked_api_container_labels_traefik_path_prefix: /api
+stoked_api_container_labels_traefik_compression_middleware_enabled: false
+stoked_api_container_labels_traefik_compression_middleware_name: ""
+stoked_api_container_labels_traefik_additional_response_headers: {}
+stoked_api_container_labels_additional_labels: []
+
+stoked_api_container_extra_arguments: []
+
+stoked_api_systemd_required_services_list: "{{ stoked_api_systemd_required_services_list_default + stoked_api_systemd_required_services_list_auto + stoked_api_systemd_required_services_list_custom }}"
+stoked_api_systemd_required_services_list_default:
+  - "{{ sysd_docker_service }}"
+  - "{{ stoked_mongodb_identifier }}.service"
+  - "{{ stoked_redis_identifier }}.service"
+  - "{{ stoked_rabbitmq_identifier }}.service"
+stoked_api_systemd_required_services_list_auto: []
+stoked_api_systemd_required_services_list_custom: []
+
+stoked_api_systemd_wanted_services_list: "{{ stoked_api_systemd_wanted_services_list_default + stoked_api_systemd_wanted_services_list_auto + stoked_api_systemd_wanted_services_list_custom }}"
+stoked_api_systemd_wanted_services_list_default: []
+stoked_api_systemd_wanted_services_list_auto: []
+stoked_api_systemd_wanted_services_list_custom: []
+
+########################################################################
+# Events (bonfire) -- /ws
+########################################################################
+
+stoked_events_enabled: true
+stoked_events_identifier: "{{ stoked_identifier }}-events"
+stoked_events_base_path: "{{ stoked_base_path }}/events"
+stoked_events_container_image: "docker.io/legitservices/stoked-events:{{ stoked_version }}"
+stoked_events_container_image_force_pull: "{{ stoked_events_container_image.endswith(':latest') }}"
+stoked_events_container_network: "{{ stoked_container_network }}"
+stoked_events_http_port: 14703
+
+stoked_events_container_additional_networks: "{{ stoked_events_container_additional_networks_default + stoked_events_container_additional_networks_auto + stoked_events_container_additional_networks_custom }}"
+stoked_events_container_additional_networks_default: []
+stoked_events_container_additional_networks_auto: []
+stoked_events_container_additional_networks_custom: []
+
+stoked_events_container_labels_traefik_enabled: true
+stoked_events_container_labels_traefik_docker_network: ""
+stoked_events_container_labels_traefik_rule: "Host(`{{ stoked_hostname }}`) && PathPrefix(`/ws`)"
+stoked_events_container_labels_traefik_priority: 0
+stoked_events_container_labels_traefik_entrypoints: web-secure
+stoked_events_container_labels_traefik_tls: true
+stoked_events_container_labels_traefik_tls_certResolver: default
+stoked_events_container_labels_traefik_path_prefix: /ws
+stoked_events_container_labels_traefik_compression_middleware_enabled: false
+stoked_events_container_labels_traefik_compression_middleware_name: ""
+stoked_events_container_labels_traefik_additional_response_headers: {}
+stoked_events_container_labels_additional_labels: []
+
+stoked_events_container_extra_arguments: []
+
+stoked_events_systemd_required_services_list: "{{ stoked_events_systemd_required_services_list_default + stoked_events_systemd_required_services_list_auto + stoked_events_systemd_required_services_list_custom }}"
+stoked_events_systemd_required_services_list_default:
+  - "{{ sysd_docker_service }}"
+  - "{{ stoked_mongodb_identifier }}.service"
+  - "{{ stoked_redis_identifier }}.service"
+stoked_events_systemd_required_services_list_auto: []
+stoked_events_systemd_required_services_list_custom: []
+
+stoked_events_systemd_wanted_services_list: "{{ stoked_events_systemd_wanted_services_list_default + stoked_events_systemd_wanted_services_list_auto + stoked_events_systemd_wanted_services_list_custom }}"
+stoked_events_systemd_wanted_services_list_default: []
+stoked_events_systemd_wanted_services_list_auto: []
+stoked_events_systemd_wanted_services_list_custom: []
+
+########################################################################
+# Autumn (file server) -- /autumn
+########################################################################
+
+stoked_autumn_enabled: true
+stoked_autumn_identifier: "{{ stoked_identifier }}-autumn"
+stoked_autumn_base_path: "{{ stoked_base_path }}/autumn"
+stoked_autumn_container_image: "docker.io/legitservices/stoked-file-server:{{ stoked_version }}"
+stoked_autumn_container_image_force_pull: "{{ stoked_autumn_container_image.endswith(':latest') }}"
+stoked_autumn_container_network: "{{ stoked_container_network }}"
+stoked_autumn_http_port: 14704
+
+stoked_autumn_container_additional_networks: "{{ stoked_autumn_container_additional_networks_default + stoked_autumn_container_additional_networks_auto + stoked_autumn_container_additional_networks_custom }}"
+stoked_autumn_container_additional_networks_default: []
+stoked_autumn_container_additional_networks_auto: []
+stoked_autumn_container_additional_networks_custom: []
+
+stoked_autumn_container_labels_traefik_enabled: true
+stoked_autumn_container_labels_traefik_docker_network: ""
+stoked_autumn_container_labels_traefik_rule: "Host(`{{ stoked_hostname }}`) && PathPrefix(`/autumn`)"
+stoked_autumn_container_labels_traefik_priority: 0
+stoked_autumn_container_labels_traefik_entrypoints: web-secure
+stoked_autumn_container_labels_traefik_tls: true
+stoked_autumn_container_labels_traefik_tls_certResolver: default
+stoked_autumn_container_labels_traefik_path_prefix: /autumn
+stoked_autumn_container_labels_traefik_compression_middleware_enabled: false
+stoked_autumn_container_labels_traefik_compression_middleware_name: ""
+stoked_autumn_container_labels_traefik_additional_response_headers: {}
+stoked_autumn_container_labels_additional_labels: []
+
+stoked_autumn_container_extra_arguments: []
+
+stoked_autumn_systemd_required_services_list: "{{ stoked_autumn_systemd_required_services_list_default + stoked_autumn_systemd_required_services_list_auto + stoked_autumn_systemd_required_services_list_custom }}"
+stoked_autumn_systemd_required_services_list_default:
+  - "{{ sysd_docker_service }}"
+  - "{{ stoked_mongodb_identifier }}.service"
+  - "{{ stoked_createbuckets_identifier }}.service"
+stoked_autumn_systemd_required_services_list_auto: []
+stoked_autumn_systemd_required_services_list_custom: []
+
+stoked_autumn_systemd_wanted_services_list: "{{ stoked_autumn_systemd_wanted_services_list_default + stoked_autumn_systemd_wanted_services_list_auto + stoked_autumn_systemd_wanted_services_list_custom }}"
+stoked_autumn_systemd_wanted_services_list_default: []
+stoked_autumn_systemd_wanted_services_list_auto: []
+stoked_autumn_systemd_wanted_services_list_custom: []
+
+########################################################################
+# January (proxy) -- /january
+########################################################################
+
+stoked_january_enabled: true
+stoked_january_identifier: "{{ stoked_identifier }}-january"
+stoked_january_base_path: "{{ stoked_base_path }}/january"
+stoked_january_container_image: "docker.io/legitservices/stoked-proxy:{{ stoked_version }}"
+stoked_january_container_image_force_pull: "{{ stoked_january_container_image.endswith(':latest') }}"
+stoked_january_container_network: "{{ stoked_container_network }}"
+stoked_january_http_port: 14705
+
+stoked_january_container_additional_networks: "{{ stoked_january_container_additional_networks_default + stoked_january_container_additional_networks_auto + stoked_january_container_additional_networks_custom }}"
+stoked_january_container_additional_networks_default: []
+stoked_january_container_additional_networks_auto: []
+stoked_january_container_additional_networks_custom: []
+
+stoked_january_container_labels_traefik_enabled: true
+stoked_january_container_labels_traefik_docker_network: ""
+stoked_january_container_labels_traefik_rule: "Host(`{{ stoked_hostname }}`) && PathPrefix(`/january`)"
+stoked_january_container_labels_traefik_priority: 0
+stoked_january_container_labels_traefik_entrypoints: web-secure
+stoked_january_container_labels_traefik_tls: true
+stoked_january_container_labels_traefik_tls_certResolver: default
+stoked_january_container_labels_traefik_path_prefix: /january
+stoked_january_container_labels_traefik_compression_middleware_enabled: false
+stoked_january_container_labels_traefik_compression_middleware_name: ""
+stoked_january_container_labels_traefik_additional_response_headers: {}
+stoked_january_container_labels_additional_labels: []
+
+stoked_january_container_extra_arguments: []
+
+stoked_january_systemd_required_services_list: "{{ stoked_january_systemd_required_services_list_default + stoked_january_systemd_required_services_list_auto + stoked_january_systemd_required_services_list_custom }}"
+stoked_january_systemd_required_services_list_default:
+  - "{{ sysd_docker_service }}"
+stoked_january_systemd_required_services_list_auto: []
+stoked_january_systemd_required_services_list_custom: []
+
+stoked_january_systemd_wanted_services_list: []
+
+########################################################################
+# Gifbox -- /gifbox
+########################################################################
+
+stoked_gifbox_enabled: true
+stoked_gifbox_identifier: "{{ stoked_identifier }}-gifbox"
+stoked_gifbox_base_path: "{{ stoked_base_path }}/gifbox"
+stoked_gifbox_container_image: "docker.io/legitservices/stoked-gifbox:{{ stoked_version }}"
+stoked_gifbox_container_image_force_pull: "{{ stoked_gifbox_container_image.endswith(':latest') }}"
+stoked_gifbox_container_network: "{{ stoked_container_network }}"
+stoked_gifbox_http_port: 14706
+
+stoked_gifbox_container_additional_networks: "{{ stoked_gifbox_container_additional_networks_default + stoked_gifbox_container_additional_networks_auto + stoked_gifbox_container_additional_networks_custom }}"
+stoked_gifbox_container_additional_networks_default: []
+stoked_gifbox_container_additional_networks_auto: []
+stoked_gifbox_container_additional_networks_custom: []
+
+stoked_gifbox_container_labels_traefik_enabled: true
+stoked_gifbox_container_labels_traefik_docker_network: ""
+stoked_gifbox_container_labels_traefik_rule: "Host(`{{ stoked_hostname }}`) && PathPrefix(`/gifbox`)"
+stoked_gifbox_container_labels_traefik_priority: 0
+stoked_gifbox_container_labels_traefik_entrypoints: web-secure
+stoked_gifbox_container_labels_traefik_tls: true
+stoked_gifbox_container_labels_traefik_tls_certResolver: default
+stoked_gifbox_container_labels_traefik_path_prefix: /gifbox
+stoked_gifbox_container_labels_traefik_compression_middleware_enabled: false
+stoked_gifbox_container_labels_traefik_compression_middleware_name: ""
+stoked_gifbox_container_labels_traefik_additional_response_headers: {}
+stoked_gifbox_container_labels_additional_labels: []
+
+stoked_gifbox_container_extra_arguments: []
+
+stoked_gifbox_systemd_required_services_list: "{{ stoked_gifbox_systemd_required_services_list_default + stoked_gifbox_systemd_required_services_list_auto + stoked_gifbox_systemd_required_services_list_custom }}"
+stoked_gifbox_systemd_required_services_list_default:
+  - "{{ sysd_docker_service }}"
+stoked_gifbox_systemd_required_services_list_auto: []
+stoked_gifbox_systemd_required_services_list_custom: []
+
+stoked_gifbox_systemd_wanted_services_list: []
+
+########################################################################
+# Web -- / (catch-all, lowest priority)
+########################################################################
+
+stoked_web_enabled: true
+stoked_web_identifier: "{{ stoked_identifier }}-web"
+stoked_web_base_path: "{{ stoked_base_path }}/web"
+stoked_web_container_image: "docker.io/legitservices/stoked-web:{{ stoked_version }}"
+stoked_web_container_image_force_pull: "{{ stoked_web_container_image.endswith(':latest') }}"
+stoked_web_container_network: "{{ stoked_container_network }}"
+stoked_web_http_port: 5000
+
+stoked_web_container_additional_networks: "{{ stoked_web_container_additional_networks_default + stoked_web_container_additional_networks_auto + stoked_web_container_additional_networks_custom }}"
+stoked_web_container_additional_networks_default: []
+stoked_web_container_additional_networks_auto: []
+stoked_web_container_additional_networks_custom: []
+
+stoked_web_container_labels_traefik_enabled: true
+stoked_web_container_labels_traefik_docker_network: ""
+stoked_web_container_labels_traefik_rule: "Host(`{{ stoked_hostname }}`)"
+stoked_web_container_labels_traefik_priority: 1
+stoked_web_container_labels_traefik_entrypoints: web-secure
+stoked_web_container_labels_traefik_tls: true
+stoked_web_container_labels_traefik_tls_certResolver: default
+stoked_web_container_labels_traefik_path_prefix: /
+stoked_web_container_labels_traefik_compression_middleware_enabled: false
+stoked_web_container_labels_traefik_compression_middleware_name: ""
+stoked_web_container_labels_traefik_additional_response_headers: {}
+stoked_web_container_labels_additional_labels: []
+
+stoked_web_container_extra_arguments: []
+
+stoked_web_systemd_required_services_list: "{{ stoked_web_systemd_required_services_list_default + stoked_web_systemd_required_services_list_auto + stoked_web_systemd_required_services_list_custom }}"
+stoked_web_systemd_required_services_list_default:
+  - "{{ sysd_docker_service }}"
+stoked_web_systemd_required_services_list_auto: []
+stoked_web_systemd_required_services_list_custom: []
+
+stoked_web_systemd_wanted_services_list: []
+
+########################################################################
+# LiveKit -- /livekit + direct RTC ports
+########################################################################
+
+stoked_livekit_enabled: true
+stoked_livekit_identifier: "{{ stoked_identifier }}-livekit"
+stoked_livekit_base_path: "{{ stoked_base_path }}/livekit"
+stoked_livekit_container_image: "docker.io/legitservices/livekit-server:{{ stoked_version }}"
+stoked_livekit_container_image_force_pull: "{{ stoked_livekit_container_image.endswith(':latest') }}"
+stoked_livekit_container_network: "{{ stoked_container_network }}"
+stoked_livekit_http_port: 7880
+stoked_livekit_tcp_port: 7881
+stoked_livekit_udp_port_start: 50000
+stoked_livekit_udp_port_end: 50100
+
+stoked_livekit_container_additional_networks: "{{ stoked_livekit_container_additional_networks_default + stoked_livekit_container_additional_networks_auto + stoked_livekit_container_additional_networks_custom }}"
+stoked_livekit_container_additional_networks_default: []
+stoked_livekit_container_additional_networks_auto: []
+stoked_livekit_container_additional_networks_custom: []
+
+stoked_livekit_container_labels_traefik_enabled: true
+stoked_livekit_container_labels_traefik_docker_network: ""
+stoked_livekit_container_labels_traefik_rule: "Host(`{{ stoked_hostname }}`) && PathPrefix(`/livekit`)"
+stoked_livekit_container_labels_traefik_priority: 0
+stoked_livekit_container_labels_traefik_entrypoints: web-secure
+stoked_livekit_container_labels_traefik_tls: true
+stoked_livekit_container_labels_traefik_tls_certResolver: default
+stoked_livekit_container_labels_traefik_path_prefix: /livekit
+stoked_livekit_container_labels_traefik_compression_middleware_enabled: false
+stoked_livekit_container_labels_traefik_compression_middleware_name: ""
+stoked_livekit_container_labels_traefik_additional_response_headers: {}
+stoked_livekit_container_labels_additional_labels: []
+
+stoked_livekit_container_extra_arguments: []
+
+stoked_livekit_systemd_required_services_list: "{{ stoked_livekit_systemd_required_services_list_default + stoked_livekit_systemd_required_services_list_auto + stoked_livekit_systemd_required_services_list_custom }}"
+stoked_livekit_systemd_required_services_list_default:
+  - "{{ sysd_docker_service }}"
+  - "{{ stoked_redis_identifier }}.service"
+stoked_livekit_systemd_required_services_list_auto: []
+stoked_livekit_systemd_required_services_list_custom: []
+
+stoked_livekit_systemd_wanted_services_list: []
+
+########################################################################
+# Crond (no external access)
+########################################################################
+
+stoked_crond_enabled: true
+stoked_crond_identifier: "{{ stoked_identifier }}-crond"
+stoked_crond_base_path: "{{ stoked_base_path }}/crond"
+stoked_crond_container_image: "docker.io/legitservices/stoked-crond:{{ stoked_version }}"
+stoked_crond_container_image_force_pull: "{{ stoked_crond_container_image.endswith(':latest') }}"
+stoked_crond_container_network: "{{ stoked_container_network }}"
+stoked_crond_container_extra_arguments: []
+
+stoked_crond_systemd_required_services_list:
+  - "{{ sysd_docker_service }}"
+  - "{{ stoked_mongodb_identifier }}.service"
+  - "{{ stoked_minio_identifier }}.service"
+
+########################################################################
+# Pushd (no external access)
+########################################################################
+
+stoked_pushd_enabled: true
+stoked_pushd_identifier: "{{ stoked_identifier }}-pushd"
+stoked_pushd_base_path: "{{ stoked_base_path }}/pushd"
+stoked_pushd_container_image: "docker.io/legitservices/stoked-pushd:{{ stoked_version }}"
+stoked_pushd_container_image_force_pull: "{{ stoked_pushd_container_image.endswith(':latest') }}"
+stoked_pushd_container_network: "{{ stoked_container_network }}"
+stoked_pushd_container_extra_arguments: []
+
+stoked_pushd_systemd_required_services_list:
+  - "{{ sysd_docker_service }}"
+  - "{{ stoked_mongodb_identifier }}.service"
+  - "{{ stoked_redis_identifier }}.service"
+  - "{{ stoked_rabbitmq_identifier }}.service"
+
+########################################################################
+# Voice Ingress (no external access)
+########################################################################
+
+stoked_voice_ingress_enabled: true
+stoked_voice_ingress_identifier: "{{ stoked_identifier }}-voice-ingress"
+stoked_voice_ingress_base_path: "{{ stoked_base_path }}/voice-ingress"
+stoked_voice_ingress_container_image: "docker.io/legitservices/stoked-voice-ingress:{{ stoked_version }}"
+stoked_voice_ingress_container_image_force_pull: "{{ stoked_voice_ingress_container_image.endswith(':latest') }}"
+stoked_voice_ingress_container_network: "{{ stoked_container_network }}"
+stoked_voice_ingress_container_extra_arguments: []
+
+stoked_voice_ingress_systemd_required_services_list:
+  - "{{ sysd_docker_service }}"
+  - "{{ stoked_mongodb_identifier }}.service"
+  - "{{ stoked_rabbitmq_identifier }}.service"

@@ -1,0 +1,35 @@
+[Unit]
+Description=Stoked Crond ({{ stoked_crond_identifier }})
+{% for service in stoked_crond_systemd_required_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Environment="HOME={{ sysd_docker_unit_home_path }}"
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_crond_identifier }} 2>/dev/null || true'
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_crond_identifier }} 2>/dev/null || true'
+
+ExecStartPre={{ sysd_docker_host_command }} create \
+                --rm \
+                --name={{ stoked_crond_identifier }} \
+                --log-driver=none \
+                --network={{ stoked_crond_container_network }} \
+                --mount type=bind,src={{ stoked_base_path }}/Revolt.toml,dst=/Revolt.toml,options=ro \
+                {% if stoked_crond_container_extra_arguments | length > 0 %}
+                {{ stoked_crond_container_extra_arguments | join(' ') }} \
+                {% endif %}
+                {{ stoked_crond_container_image }}
+
+ExecStart={{ sysd_docker_host_command }} start --attach {{ stoked_crond_identifier }}
+
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_crond_identifier }} 2>/dev/null || true'
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_crond_identifier }} 2>/dev/null || true'
+Restart=always
+RestartSec=30
+SyslogIdentifier={{ stoked_crond_identifier }}
+
+[Install]
+WantedBy=multi-user.target

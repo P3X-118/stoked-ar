@@ -1,0 +1,6 @@
+---
+
+stoked_container_networks: |-
+  {{
+    [stoked_container_network] | unique
+  }}

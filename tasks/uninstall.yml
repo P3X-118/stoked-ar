@@ -1,0 +1,69 @@
+---
+
+- name: Check existence of Stoked systemd services
+  ansible.builtin.stat:
+    path: "{{ sysd_docker_service_path }}/{{ item }}.service"
+  register: stoked_service_stat
+  with_items:
+    - "{{ stoked_mongodb_identifier }}"
+    - "{{ stoked_redis_identifier }}"
+    - "{{ stoked_rabbitmq_identifier }}"
+    - "{{ stoked_minio_identifier }}"
+    - "{{ stoked_createbuckets_identifier }}"
+    - "{{ stoked_api_identifier }}"
+    - "{{ stoked_events_identifier }}"
+    - "{{ stoked_autumn_identifier }}"
+    - "{{ stoked_january_identifier }}"
+    - "{{ stoked_gifbox_identifier }}"
+    - "{{ stoked_web_identifier }}"
+    - "{{ stoked_livekit_identifier }}"
+    - "{{ stoked_crond_identifier }}"
+    - "{{ stoked_pushd_identifier }}"
+    - "{{ stoked_voice_ingress_identifier }}"
+
+- name: Ensure Stoked systemd services are stopped
+  when: item.stat.exists
+  ansible.builtin.service:
+    name: "{{ item.item }}"
+    state: stopped
+    daemon_reload: true
+  with_items: "{{ stoked_service_stat.results }}"
+
+- name: Ensure Stoked systemd services are removed
+  when: item.stat.exists
+  ansible.builtin.file:
+    path: "{{ sysd_docker_service_path }}/{{ item.item }}.service"
+    state: absent
+  with_items: "{{ stoked_service_stat.results }}"
+
+- name: Ensure Stoked containers are removed
+  community.docker.docker_container:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - "{{ stoked_mongodb_identifier }}"
+    - "{{ stoked_redis_identifier }}"
+    - "{{ stoked_rabbitmq_identifier }}"
+    - "{{ stoked_minio_identifier }}"
+    - "{{ stoked_createbuckets_identifier }}"
+    - "{{ stoked_api_identifier }}"
+    - "{{ stoked_events_identifier }}"
+    - "{{ stoked_autumn_identifier }}"
+    - "{{ stoked_january_identifier }}"
+    - "{{ stoked_gifbox_identifier }}"
+    - "{{ stoked_web_identifier }}"
+    - "{{ stoked_livekit_identifier }}"
+    - "{{ stoked_crond_identifier }}"
+    - "{{ stoked_pushd_identifier }}"
+    - "{{ stoked_voice_ingress_identifier }}"
+
+- name: Ensure Stoked container networks are removed
+  community.docker.docker_network:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ stoked_container_networks }}"
+
+- name: Ensure Stoked base path is removed
+  ansible.builtin.file:
+    path: "{{ stoked_base_path }}"
+    state: absent

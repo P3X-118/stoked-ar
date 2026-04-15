@@ -1,0 +1,45 @@
+[Unit]
+Description=Stoked LiveKit ({{ stoked_livekit_identifier }})
+{% for service in stoked_livekit_systemd_required_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+{% for service in stoked_livekit_systemd_wanted_services_list %}
+Wants={{ service }}
+{% endfor %}
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Environment="HOME={{ sysd_docker_unit_home_path }}"
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_livekit_identifier }} 2>/dev/null || true'
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_livekit_identifier }} 2>/dev/null || true'
+
+ExecStartPre={{ sysd_docker_host_command }} create \
+                --rm \
+                --name={{ stoked_livekit_identifier }} \
+                --log-driver=none \
+                --network={{ stoked_livekit_container_network }} \
+                --label-file={{ stoked_livekit_base_path }}/labels \
+                --mount type=bind,src={{ stoked_livekit_base_path }}/livekit.yml,dst=/etc/livekit.yml,options=ro \
+                -p {{ stoked_livekit_tcp_port }}:{{ stoked_livekit_tcp_port }} \
+                -p {{ stoked_livekit_udp_port_start }}-{{ stoked_livekit_udp_port_end }}:{{ stoked_livekit_udp_port_start }}-{{ stoked_livekit_udp_port_end }}/udp \
+                {% if stoked_livekit_container_extra_arguments | length > 0 %}
+                {{ stoked_livekit_container_extra_arguments | join(' ') }} \
+                {% endif %}
+                {{ stoked_livekit_container_image }} --config /etc/livekit.yml
+
+{% for network in stoked_livekit_container_additional_networks %}
+ExecStartPre={{ sysd_docker_host_command }} network connect {{ network }} {{ stoked_livekit_identifier }}
+{% endfor %}
+
+ExecStart={{ sysd_docker_host_command }} start --attach {{ stoked_livekit_identifier }}
+
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_livekit_identifier }} 2>/dev/null || true'
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_livekit_identifier }} 2>/dev/null || true'
+Restart=always
+RestartSec=30
+SyslogIdentifier={{ stoked_livekit_identifier }}
+
+[Install]
+WantedBy=multi-user.target

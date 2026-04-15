@@ -1,0 +1,33 @@
+[hosts]
+app = "{{ stoked_scheme }}://{{ stoked_hostname }}"
+api = "{{ stoked_scheme }}://{{ stoked_hostname }}/api"
+events = "wss://{{ stoked_hostname }}/ws"
+autumn = "{{ stoked_scheme }}://{{ stoked_hostname }}/autumn"
+january = "{{ stoked_scheme }}://{{ stoked_hostname }}/january"
+
+[hosts.livekit]
+worldwide = "wss://{{ stoked_hostname }}/livekit"
+
+[pushd.vapid]
+private_key = "{{ stoked_effective_vapid_private_key }}"
+public_key = "{{ stoked_effective_vapid_public_key }}"
+
+[files]
+encryption_key = "{{ stoked_effective_files_encryption_key }}"
+
+[api.livekit.nodes.worldwide]
+url = "http://{{ stoked_livekit_identifier }}:{{ stoked_livekit_http_port }}"
+lat = 0.0
+lon = 0.0
+key = "{{ stoked_effective_livekit_key }}"
+secret = "{{ stoked_effective_livekit_secret }}"
+
+{% if stoked_video_enabled %}
+[features.limits.new_user]
+video_resolution = [1920, 1080]
+video_aspect_ratio = [0.3, 10]
+
+[features.limits.default]
+video_resolution = [1920, 1080]
+video_aspect_ratio = [0.3, 10]
+{% endif %}

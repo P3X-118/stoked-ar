@@ -1,0 +1,18 @@
+[Unit]
+Description=Stoked bucket initialization ({{ stoked_createbuckets_identifier }})
+Requires={{ stoked_minio_identifier }}.service
+After={{ stoked_minio_identifier }}.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment="HOME={{ sysd_docker_unit_home_path }}"
+ExecStart={{ sysd_docker_host_command }} run --rm \
+                --name={{ stoked_createbuckets_identifier }} \
+                --network={{ stoked_container_network }} \
+                {{ stoked_createbuckets_container_image }} \
+                /bin/sh -c "while ! /usr/bin/mc ready minio; do /usr/bin/mc alias set minio http://{{ stoked_minio_identifier }}:9000 {{ stoked_minio_root_user }} {{ stoked_minio_root_password }}; echo 'Waiting minio...' && sleep 1; done; /usr/bin/mc mb minio/{{ stoked_minio_bucket_name }}; exit 0;"
+
+[Install]
+WantedBy=multi-user.target

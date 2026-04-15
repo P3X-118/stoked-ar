@@ -1,0 +1,393 @@
+---
+
+########################################################################
+# Secret generation (VAPID keys)
+########################################################################
+
+- name: Check if Stoked VAPID private key exists
+  ansible.builtin.stat:
+    path: "{{ stoked_base_path }}/vapid_private_key"
+  register: stoked_vapid_key_file
+
+- name: Generate Stoked VAPID keys
+  when: not stoked_vapid_key_file.stat.exists and stoked_vapid_private_key == ''
+  block:
+    - name: Generate VAPID EC private key
+      ansible.builtin.command:
+        cmd: openssl ecparam -name prime256v1 -genkey -noout
+      register: stoked_vapid_privkey_raw
+      changed_when: true
+
+    - name: Derive VAPID public key
+      ansible.builtin.shell:
+        cmd: "echo '{{ stoked_vapid_privkey_raw.stdout }}' | openssl ec -outform DER 2>/dev/null | tail --bytes 65 | base64 | tr '/+' '_-' | tr -d '\\n' | tr -d '='"
+      register: stoked_vapid_pubkey_raw
+      changed_when: false
+
+    - name: Encode VAPID private key
+      ansible.builtin.shell:
+        cmd: "echo '{{ stoked_vapid_privkey_raw.stdout }}' | base64 -w0 | tr -d '='"
+      register: stoked_vapid_privkey_encoded
+      changed_when: false
+
+    - name: Set VAPID key facts
+      ansible.builtin.set_fact:
+        stoked_effective_vapid_private_key: "{{ stoked_vapid_privkey_encoded.stdout }}"
+        stoked_effective_vapid_public_key: "{{ stoked_vapid_pubkey_raw.stdout }}"
+
+- name: Read existing VAPID private key
+  when: stoked_vapid_key_file.stat.exists and stoked_vapid_private_key == ''
+  block:
+    - name: Read VAPID private key from file
+      ansible.builtin.slurp:
+        src: "{{ stoked_base_path }}/vapid_private_key"
+      register: stoked_vapid_privkey_file
+
+    - name: Read VAPID public key from file
+      ansible.builtin.slurp:
+        src: "{{ stoked_base_path }}/vapid_public_key"
+      register: stoked_vapid_pubkey_file
+
+    - name: Set VAPID key facts from files
+      ansible.builtin.set_fact:
+        stoked_effective_vapid_private_key: "{{ stoked_vapid_privkey_file.content | b64decode | trim }}"
+        stoked_effective_vapid_public_key: "{{ stoked_vapid_pubkey_file.content | b64decode | trim }}"
+
+- name: Use provided VAPID keys
+  when: stoked_vapid_private_key != ''
+  ansible.builtin.set_fact:
+    stoked_effective_vapid_private_key: "{{ stoked_vapid_private_key }}"
+    stoked_effective_vapid_public_key: "{{ stoked_vapid_public_key }}"
+
+- name: Set effective encryption and LiveKit secrets
+  ansible.builtin.set_fact:
+    stoked_effective_files_encryption_key: "{{ stoked_files_encryption_key }}"
+    stoked_effective_livekit_key: "{{ stoked_livekit_key }}"
+    stoked_effective_livekit_secret: "{{ stoked_livekit_secret }}"
+
+########################################################################
+# Directories
+########################################################################
+
+- name: Ensure Stoked paths exist
+  when: item.when | bool
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "0750"
+    owner: "{{ stoked_uid }}"
+    group: "{{ stoked_gid }}"
+  with_items:
+    - path: "{{ stoked_base_path }}"
+      when: true
+    - path: "{{ stoked_mongodb_base_path }}"
+      when: "{{ stoked_mongodb_enabled }}"
+    - path: "{{ stoked_mongodb_data_path }}"
+      when: "{{ stoked_mongodb_enabled }}"
+    - path: "{{ stoked_redis_base_path }}"
+      when: "{{ stoked_redis_enabled }}"
+    - path: "{{ stoked_rabbitmq_base_path }}"
+      when: "{{ stoked_rabbitmq_enabled }}"
+    - path: "{{ stoked_rabbitmq_data_path }}"
+      when: "{{ stoked_rabbitmq_enabled }}"
+    - path: "{{ stoked_minio_base_path }}"
+      when: "{{ stoked_minio_enabled }}"
+    - path: "{{ stoked_minio_data_path }}"
+      when: "{{ stoked_minio_enabled }}"
+    - path: "{{ stoked_api_base_path }}"
+      when: "{{ stoked_api_enabled }}"
+    - path: "{{ stoked_events_base_path }}"
+      when: "{{ stoked_events_enabled }}"
+    - path: "{{ stoked_autumn_base_path }}"
+      when: "{{ stoked_autumn_enabled }}"
+    - path: "{{ stoked_january_base_path }}"
+      when: "{{ stoked_january_enabled }}"
+    - path: "{{ stoked_gifbox_base_path }}"
+      when: "{{ stoked_gifbox_enabled }}"
+    - path: "{{ stoked_web_base_path }}"
+      when: "{{ stoked_web_enabled }}"
+    - path: "{{ stoked_livekit_base_path }}"
+      when: "{{ stoked_livekit_enabled }}"
+    - path: "{{ stoked_crond_base_path }}"
+      when: "{{ stoked_crond_enabled }}"
+    - path: "{{ stoked_pushd_base_path }}"
+      when: "{{ stoked_pushd_enabled }}"
+    - path: "{{ stoked_voice_ingress_base_path }}"
+      when: "{{ stoked_voice_ingress_enabled }}"
+
+########################################################################
+# Persist VAPID keys
+########################################################################
+
+- name: Persist VAPID private key
+  ansible.builtin.copy:
+    content: "{{ stoked_effective_vapid_private_key }}"
+    dest: "{{ stoked_base_path }}/vapid_private_key"
+    mode: "0600"
+    owner: "{{ stoked_uid }}"
+    group: "{{ stoked_gid }}"
+
+- name: Persist VAPID public key
+  ansible.builtin.copy:
+    content: "{{ stoked_effective_vapid_public_key }}"
+    dest: "{{ stoked_base_path }}/vapid_public_key"
+    mode: "0640"
+    owner: "{{ stoked_uid }}"
+    group: "{{ stoked_gid }}"
+
+########################################################################
+# Support files (env, labels, config)
+########################################################################
+
+- name: Ensure Stoked support files installed
+  when: item.when | bool
+  ansible.builtin.template:
+    src: "{{ role_path }}/{{ item.src }}"
+    dest: "{{ item.dst }}"
+    mode: "0640"
+    owner: "{{ stoked_uid }}"
+    group: "{{ stoked_gid }}"
+  with_items:
+    # Config files
+    - src: templates/revolt-toml.j2
+      dst: "{{ stoked_base_path }}/Revolt.toml"
+      when: true
+    - src: templates/livekit-yml.j2
+      dst: "{{ stoked_livekit_base_path }}/livekit.yml"
+      when: "{{ stoked_livekit_enabled }}"
+    # Infrastructure env files
+    - src: templates/rabbitmq/env.j2
+      dst: "{{ stoked_rabbitmq_base_path }}/env"
+      when: "{{ stoked_rabbitmq_enabled }}"
+    - src: templates/minio/env.j2
+      dst: "{{ stoked_minio_base_path }}/env"
+      when: "{{ stoked_minio_enabled }}"
+    # App env files
+    - src: templates/api/env.j2
+      dst: "{{ stoked_api_base_path }}/env"
+      when: "{{ stoked_api_enabled }}"
+    - src: templates/events/env.j2
+      dst: "{{ stoked_events_base_path }}/env"
+      when: "{{ stoked_events_enabled }}"
+    - src: templates/autumn/env.j2
+      dst: "{{ stoked_autumn_base_path }}/env"
+      when: "{{ stoked_autumn_enabled }}"
+    - src: templates/january/env.j2
+      dst: "{{ stoked_january_base_path }}/env"
+      when: "{{ stoked_january_enabled }}"
+    - src: templates/gifbox/env.j2
+      dst: "{{ stoked_gifbox_base_path }}/env"
+      when: "{{ stoked_gifbox_enabled }}"
+    - src: templates/web/env.j2
+      dst: "{{ stoked_web_base_path }}/env"
+      when: "{{ stoked_web_enabled }}"
+    # App label files (traefik-exposed only)
+    - src: templates/api/labels.j2
+      dst: "{{ stoked_api_base_path }}/labels"
+      when: "{{ stoked_api_enabled }}"
+    - src: templates/events/labels.j2
+      dst: "{{ stoked_events_base_path }}/labels"
+      when: "{{ stoked_events_enabled }}"
+    - src: templates/autumn/labels.j2
+      dst: "{{ stoked_autumn_base_path }}/labels"
+      when: "{{ stoked_autumn_enabled }}"
+    - src: templates/january/labels.j2
+      dst: "{{ stoked_january_base_path }}/labels"
+      when: "{{ stoked_january_enabled }}"
+    - src: templates/gifbox/labels.j2
+      dst: "{{ stoked_gifbox_base_path }}/labels"
+      when: "{{ stoked_gifbox_enabled }}"
+    - src: templates/web/labels.j2
+      dst: "{{ stoked_web_base_path }}/labels"
+      when: "{{ stoked_web_enabled }}"
+    - src: templates/livekit/labels.j2
+      dst: "{{ stoked_livekit_base_path }}/labels"
+      when: "{{ stoked_livekit_enabled }}"
+
+########################################################################
+# Pull container images
+########################################################################
+
+- name: Ensure Stoked container images are pulled via community.docker.docker_image
+  when: sysd_docker_image_pull_method == 'ansible-module' and item.when
+  community.docker.docker_image:
+    name: "{{ item.image }}"
+    source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
+    force_source: "{{ item.force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
+    force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else item.force_pull }}"
+  register: image_pull_result
+  retries: "{{ container_retry }}"
+  delay: "{{ container_retry_delay }}"
+  until: image_pull_result is not failed
+  with_items:
+    - image: "{{ stoked_mongodb_container_image }}"
+      force_pull: "{{ stoked_mongodb_container_image_force_pull }}"
+      when: "{{ stoked_mongodb_enabled }}"
+    - image: "{{ stoked_redis_container_image }}"
+      force_pull: "{{ stoked_redis_container_image_force_pull }}"
+      when: "{{ stoked_redis_enabled }}"
+    - image: "{{ stoked_rabbitmq_container_image }}"
+      force_pull: "{{ stoked_rabbitmq_container_image_force_pull }}"
+      when: "{{ stoked_rabbitmq_enabled }}"
+    - image: "{{ stoked_minio_container_image }}"
+      force_pull: "{{ stoked_minio_container_image_force_pull }}"
+      when: "{{ stoked_minio_enabled }}"
+    - image: "{{ stoked_createbuckets_container_image }}"
+      force_pull: false
+      when: "{{ stoked_minio_enabled }}"
+    - image: "{{ stoked_api_container_image }}"
+      force_pull: "{{ stoked_api_container_image_force_pull }}"
+      when: "{{ stoked_api_enabled }}"
+    - image: "{{ stoked_events_container_image }}"
+      force_pull: "{{ stoked_events_container_image_force_pull }}"
+      when: "{{ stoked_events_enabled }}"
+    - image: "{{ stoked_autumn_container_image }}"
+      force_pull: "{{ stoked_autumn_container_image_force_pull }}"
+      when: "{{ stoked_autumn_enabled }}"
+    - image: "{{ stoked_january_container_image }}"
+      force_pull: "{{ stoked_january_container_image_force_pull }}"
+      when: "{{ stoked_january_enabled }}"
+    - image: "{{ stoked_gifbox_container_image }}"
+      force_pull: "{{ stoked_gifbox_container_image_force_pull }}"
+      when: "{{ stoked_gifbox_enabled }}"
+    - image: "{{ stoked_web_container_image }}"
+      force_pull: "{{ stoked_web_container_image_force_pull }}"
+      when: "{{ stoked_web_enabled }}"
+    - image: "{{ stoked_livekit_container_image }}"
+      force_pull: "{{ stoked_livekit_container_image_force_pull }}"
+      when: "{{ stoked_livekit_enabled }}"
+    - image: "{{ stoked_crond_container_image }}"
+      force_pull: "{{ stoked_crond_container_image_force_pull }}"
+      when: "{{ stoked_crond_enabled }}"
+    - image: "{{ stoked_pushd_container_image }}"
+      force_pull: "{{ stoked_pushd_container_image_force_pull }}"
+      when: "{{ stoked_pushd_enabled }}"
+    - image: "{{ stoked_voice_ingress_container_image }}"
+      force_pull: "{{ stoked_voice_ingress_container_image_force_pull }}"
+      when: "{{ stoked_voice_ingress_enabled }}"
+
+- name: Ensure Stoked container images are pulled via command
+  when: sysd_docker_image_pull_method == 'command' and item.when
+  ansible.builtin.command:
+    cmd: "{{ sysd_docker_host_command }} pull {{ item.image }}"
+  register: image_pull_result
+  retries: "{{ container_retry }}"
+  delay: "{{ container_retry_delay }}"
+  until: image_pull_result is not failed
+  changed_when: "'Downloaded newer image' in image_pull_result.stdout"
+  with_items:
+    - image: "{{ stoked_mongodb_container_image }}"
+      when: "{{ stoked_mongodb_enabled }}"
+    - image: "{{ stoked_redis_container_image }}"
+      when: "{{ stoked_redis_enabled }}"
+    - image: "{{ stoked_rabbitmq_container_image }}"
+      when: "{{ stoked_rabbitmq_enabled }}"
+    - image: "{{ stoked_minio_container_image }}"
+      when: "{{ stoked_minio_enabled }}"
+    - image: "{{ stoked_createbuckets_container_image }}"
+      when: "{{ stoked_minio_enabled }}"
+    - image: "{{ stoked_api_container_image }}"
+      when: "{{ stoked_api_enabled }}"
+    - image: "{{ stoked_events_container_image }}"
+      when: "{{ stoked_events_enabled }}"
+    - image: "{{ stoked_autumn_container_image }}"
+      when: "{{ stoked_autumn_enabled }}"
+    - image: "{{ stoked_january_container_image }}"
+      when: "{{ stoked_january_enabled }}"
+    - image: "{{ stoked_gifbox_container_image }}"
+      when: "{{ stoked_gifbox_enabled }}"
+    - image: "{{ stoked_web_container_image }}"
+      when: "{{ stoked_web_enabled }}"
+    - image: "{{ stoked_livekit_container_image }}"
+      when: "{{ stoked_livekit_enabled }}"
+    - image: "{{ stoked_crond_container_image }}"
+      when: "{{ stoked_crond_enabled }}"
+    - image: "{{ stoked_pushd_container_image }}"
+      when: "{{ stoked_pushd_enabled }}"
+    - image: "{{ stoked_voice_ingress_container_image }}"
+      when: "{{ stoked_voice_ingress_enabled }}"
+
+########################################################################
+# Container networks
+########################################################################
+
+- name: Ensure Stoked container networks are created via community.docker.docker_network
+  when: sysd_docker_net_creation_method == 'ansible-module'
+  community.general.docker_network:
+    enable_ipv6: "{{ sysd_docker_ipv6_enabled }}"
+    name: "{{ item }}"
+    driver: bridge
+    driver_options: "{{ sysd_docker_net_driver_opts }}"
+  with_items: "{{ stoked_container_networks }}"
+
+- name: Ensure Stoked container networks are created via ansible.builtin.command
+  when: sysd_docker_net_creation_method == 'command'
+  ansible.builtin.command:
+    cmd: >-
+      {{ sysd_docker_host_command }} network create
+      {% if sysd_docker_ipv6_enabled %}--ipv6{% endif %}
+      {{ sysd_docker_net_driver_opts_string }}
+      {{ item }}
+  register: network_creation_result
+  changed_when: network_creation_result.rc == 0
+  failed_when: network_creation_result.rc != 0 and 'already exists' not in network_creation_result.stderr
+  with_items: "{{ stoked_container_networks }}"
+
+########################################################################
+# Systemd service files
+########################################################################
+
+- name: Ensure Stoked systemd services are present
+  when: item.when
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0644"
+  with_items:
+    # Infrastructure
+    - src: "{{ role_path }}/templates/systemd/stoked-mongodb.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_mongodb_identifier }}.service"
+      when: "{{ stoked_mongodb_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-redis.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_redis_identifier }}.service"
+      when: "{{ stoked_redis_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-rabbitmq.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_rabbitmq_identifier }}.service"
+      when: "{{ stoked_rabbitmq_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-minio.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_minio_identifier }}.service"
+      when: "{{ stoked_minio_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-createbuckets.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_createbuckets_identifier }}.service"
+      when: "{{ stoked_minio_enabled }}"
+    # App services
+    - src: "{{ role_path }}/templates/systemd/stoked-api.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_api_identifier }}.service"
+      when: "{{ stoked_api_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-events.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_events_identifier }}.service"
+      when: "{{ stoked_events_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-autumn.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_autumn_identifier }}.service"
+      when: "{{ stoked_autumn_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-january.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_january_identifier }}.service"
+      when: "{{ stoked_january_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-gifbox.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_gifbox_identifier }}.service"
+      when: "{{ stoked_gifbox_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-web.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_web_identifier }}.service"
+      when: "{{ stoked_web_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-livekit.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_livekit_identifier }}.service"
+      when: "{{ stoked_livekit_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-crond.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_crond_identifier }}.service"
+      when: "{{ stoked_crond_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-pushd.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_pushd_identifier }}.service"
+      when: "{{ stoked_pushd_enabled }}"
+    - src: "{{ role_path }}/templates/systemd/stoked-voice-ingress.service.j2"
+      dest: "{{ sysd_docker_service_path }}/{{ stoked_voice_ingress_identifier }}.service"
+      when: "{{ stoked_voice_ingress_enabled }}"

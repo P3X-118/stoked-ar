@@ -1,0 +1,25 @@
+---
+
+- name: Install Stoked
+  tags:
+    - setup-all
+    - setup-stoked
+    - install-all
+    - install-stoked
+  block:
+    - name: Validate Stoked configuration
+      when: stoked_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
+
+    - name: Actually install Stoked
+      when: stoked_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
+
+- name: Uninstall Stoked
+  tags:
+    - setup-all
+    - setup-stoked
+  block:
+    - name: Actually uninstall Stoked
+      when: not stoked_enabled
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"

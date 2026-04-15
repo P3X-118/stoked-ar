@@ -1,0 +1,41 @@
+[Unit]
+Description=Stoked MinIO ({{ stoked_minio_identifier }})
+{% for service in stoked_minio_systemd_required_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+DefaultDependencies=no
+
+[Service]
+Type=simple
+Environment="HOME={{ sysd_docker_unit_home_path }}"
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_minio_identifier }} 2>/dev/null || true'
+ExecStartPre=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_minio_identifier }} 2>/dev/null || true'
+
+ExecStartPre={{ sysd_docker_host_command }} create \
+                --rm \
+                --name={{ stoked_minio_identifier }} \
+                --log-driver=none \
+                --network={{ stoked_minio_container_network }} \
+                --network-alias={{ stoked_minio_hostname }} \
+                --network-alias=revolt-uploads.{{ stoked_minio_hostname }} \
+                --network-alias=attachments.{{ stoked_minio_hostname }} \
+                --network-alias=avatars.{{ stoked_minio_hostname }} \
+                --network-alias=backgrounds.{{ stoked_minio_hostname }} \
+                --network-alias=icons.{{ stoked_minio_hostname }} \
+                --network-alias=banners.{{ stoked_minio_hostname }} \
+                --network-alias=emojis.{{ stoked_minio_hostname }} \
+                --env-file={{ stoked_minio_base_path }}/env \
+                --mount type=bind,src={{ stoked_minio_data_path }},dst=/data \
+                {{ stoked_minio_container_image }} server /data
+
+ExecStart={{ sysd_docker_host_command }} start --attach {{ stoked_minio_identifier }}
+
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} stop -t {{ sysd_docker_stop_grace }} {{ stoked_minio_identifier }} 2>/dev/null || true'
+ExecStop=-{{ sysd_docker_host_sh }} -c '{{ sysd_docker_host_command }} rm {{ stoked_minio_identifier }} 2>/dev/null || true'
+Restart=always
+RestartSec=30
+SyslogIdentifier={{ stoked_minio_identifier }}
+
+[Install]
+WantedBy=multi-user.target
