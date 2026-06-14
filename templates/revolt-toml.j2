@@ -1,3 +1,13 @@
+[database]
+mongodb = "mongodb://{{ stoked_mongodb_hostname }}:27017"
+redis = "redis://{{ stoked_redis_hostname }}:6379/"
+
+[rabbit]
+host = "{{ stoked_rabbitmq_hostname }}"
+port = 5672
+username = "{{ stoked_rabbitmq_user }}"
+password = "{{ stoked_rabbitmq_password }}"
+
 [hosts]
 app = "{{ stoked_scheme }}://{{ stoked_hostname }}"
 api = "{{ stoked_scheme }}://{{ stoked_hostname }}/api"
@@ -14,6 +24,14 @@ public_key = "{{ stoked_effective_vapid_public_key }}"
 
 [files]
 encryption_key = "{{ stoked_effective_files_encryption_key }}"
+
+[files.s3]
+endpoint = "http://{{ stoked_minio_hostname }}:9000"
+path_style_buckets = true
+region = "minio"
+access_key_id = "{{ stoked_minio_root_user }}"
+secret_access_key = "{{ stoked_minio_root_password }}"
+default_bucket = "{{ stoked_minio_bucket_name }}"
 
 [api.livekit.nodes.worldwide]
 url = "http://{{ stoked_livekit_identifier }}:{{ stoked_livekit_http_port }}"

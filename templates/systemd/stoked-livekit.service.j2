@@ -21,7 +21,7 @@ ExecStartPre={{ sysd_docker_host_command }} create \
                 --log-driver=none \
                 --network={{ stoked_livekit_container_network }} \
                 --label-file={{ stoked_livekit_base_path }}/labels \
-                --mount type=bind,src={{ stoked_livekit_base_path }}/livekit.yml,dst=/etc/livekit.yml,options=ro \
+                --mount type=bind,src={{ stoked_livekit_base_path }}/livekit.yml,dst=/etc/livekit.yml,readonly \
                 -p {{ stoked_livekit_tcp_port }}:{{ stoked_livekit_tcp_port }} \
                 -p {{ stoked_livekit_udp_port_start }}-{{ stoked_livekit_udp_port_end }}:{{ stoked_livekit_udp_port_start }}-{{ stoked_livekit_udp_port_end }}/udp \
                 {% if stoked_livekit_container_extra_arguments | length > 0 %}

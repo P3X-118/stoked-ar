@@ -144,16 +144,18 @@
   ansible.builtin.template:
     src: "{{ role_path }}/{{ item.src }}"
     dest: "{{ item.dst }}"
-    mode: "0640"
+    mode: "{{ item.mode | default('0640') }}"
     owner: "{{ stoked_uid }}"
     group: "{{ stoked_gid }}"
   with_items:
-    # Config files
+    # Config files (0644: bind-mounted into containers that run as non-root, e.g. 'nonroot')
     - src: templates/revolt-toml.j2
       dst: "{{ stoked_base_path }}/Revolt.toml"
+      mode: "0644"
       when: true
     - src: templates/livekit-yml.j2
       dst: "{{ stoked_livekit_base_path }}/livekit.yml"
+      mode: "0644"
       when: "{{ stoked_livekit_enabled }}"
     # Infrastructure env files
     - src: templates/rabbitmq/env.j2

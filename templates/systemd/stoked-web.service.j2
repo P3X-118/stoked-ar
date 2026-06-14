@@ -22,7 +22,7 @@ ExecStartPre={{ sysd_docker_host_command }} create \
                 --network={{ stoked_web_container_network }} \
                 --env-file={{ stoked_web_base_path }}/env \
                 --label-file={{ stoked_web_base_path }}/labels \
-                --mount type=bind,src={{ stoked_base_path }}/Revolt.toml,dst=/Revolt.toml,options=ro \
+                --mount type=bind,src={{ stoked_base_path }}/Revolt.toml,dst=/Revolt.toml,readonly \
                 {% if stoked_web_container_extra_arguments | length > 0 %}
                 {{ stoked_web_container_extra_arguments | join(' ') }} \
                 {% endif %}

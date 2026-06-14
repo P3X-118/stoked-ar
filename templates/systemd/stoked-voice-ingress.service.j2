@@ -17,7 +17,7 @@ ExecStartPre={{ sysd_docker_host_command }} create \
                 --name={{ stoked_voice_ingress_identifier }} \
                 --log-driver=none \
                 --network={{ stoked_voice_ingress_container_network }} \
-                --mount type=bind,src={{ stoked_base_path }}/Revolt.toml,dst=/Revolt.toml,options=ro \
+                --mount type=bind,src={{ stoked_base_path }}/Revolt.toml,dst=/Revolt.toml,readonly \
                 {% if stoked_voice_ingress_container_extra_arguments | length > 0 %}
                 {{ stoked_voice_ingress_container_extra_arguments | join(' ') }} \
                 {% endif %}
