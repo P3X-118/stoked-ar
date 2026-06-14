@@ -24,6 +24,16 @@ reply_to = "{{ stoked_smtp_reply_to }}"
 use_tls = {{ stoked_smtp_use_tls | default(true) | lower }}
 use_starttls = {{ stoked_smtp_use_starttls | default(false) | lower }}
 {% endif %}
+{% if stoked_oidc_enabled | default(false) %}
+
+[api.oidc]
+enabled = true
+issuer = "{{ stoked_oidc_issuer }}"
+client_id = "{{ stoked_oidc_client_id }}"
+client_secret = "{{ stoked_oidc_client_secret }}"
+scopes = "{{ stoked_oidc_scopes | default('openid profile email') }}"
+redirect_uri = "{{ stoked_oidc_redirect_uri }}"
+{% endif %}
 
 [hosts]
 app = "{{ stoked_scheme }}://{{ stoked_hostname }}"

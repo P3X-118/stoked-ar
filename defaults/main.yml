@@ -59,6 +59,23 @@ stoked_smtp_use_starttls: false
 stoked_registration_invite_only: false
 
 ########################################################################
+# Authentik / OIDC SSO login (native delta /auth/oidc)
+########################################################################
+# When stoked_oidc_enabled is true, [api.oidc] is rendered into Revolt.toml and
+# delta offers /auth/oidc/{login,callback}. Requires an OIDC-capable image (the
+# routes are compiled in). client_secret is derived from sgc_pgsk in SGC
+# group_vars (salt 'stoked.oidc', mirroring the Owncast radio-chat convention);
+# leave the placeholder empty here. The IdP host may need a container
+# --add-host (set via stoked_api_container_extra_arguments) when it is only
+# reachable over a private mesh.
+stoked_oidc_enabled: false
+stoked_oidc_issuer: ""
+stoked_oidc_client_id: "stoked"
+stoked_oidc_client_secret: ""
+stoked_oidc_scopes: "openid profile email"
+stoked_oidc_redirect_uri: "{{ stoked_scheme }}://{{ stoked_hostname }}/api/auth/oidc/callback"
+
+########################################################################
 # Network
 ########################################################################
 
