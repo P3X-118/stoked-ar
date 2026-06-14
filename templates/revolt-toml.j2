@@ -8,6 +8,23 @@ port = 5672
 username = "{{ stoked_rabbitmq_user }}"
 password = "{{ stoked_rabbitmq_password }}"
 
+[api.registration]
+invite_only = {{ stoked_registration_invite_only | default(false) | lower }}
+{% if stoked_smtp_host | default('') | length > 0 %}
+
+[api.smtp]
+host = "{{ stoked_smtp_host }}"
+port = {{ stoked_smtp_port | default(465) }}
+username = "{{ stoked_smtp_username }}"
+password = "{{ stoked_smtp_password }}"
+from_address = "{{ stoked_smtp_from_address }}"
+{% if stoked_smtp_reply_to | default('') | length > 0 %}
+reply_to = "{{ stoked_smtp_reply_to }}"
+{% endif %}
+use_tls = {{ stoked_smtp_use_tls | default(true) | lower }}
+use_starttls = {{ stoked_smtp_use_starttls | default(false) | lower }}
+{% endif %}
+
 [hosts]
 app = "{{ stoked_scheme }}://{{ stoked_hostname }}"
 api = "{{ stoked_scheme }}://{{ stoked_hostname }}/api"

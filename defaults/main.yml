@@ -36,6 +36,29 @@ stoked_livekit_key: ""
 stoked_livekit_secret: ""
 
 ########################################################################
+# Email / SMTP (signup verification)
+########################################################################
+# Email verification is ENABLED automatically when stoked_smtp_host is
+# non-empty (authifier: EmailVerificationConfig::Enabled). Leave host empty
+# to skip verification entirely (signups auto-verify, no mail is sent).
+stoked_smtp_host: ""
+stoked_smtp_port: 465
+stoked_smtp_username: ""
+stoked_smtp_password: ""
+stoked_smtp_from_address: ""
+stoked_smtp_reply_to: ""
+# Transport (authifier crates/authifier/src/config/email_verification.rs):
+#   use_starttls=true            -> STARTTLS relay  (use port 587)
+#   use_starttls=false (default) -> implicit TLS    (use port 465)
+#   use_tls=false                -> DISABLES TLS (plaintext) -- DEV/TEST ONLY.
+# Never set use_tls=false in production.
+stoked_smtp_use_tls: true
+stoked_smtp_use_starttls: false
+
+# Registration: open by default. Set true to require an invite code.
+stoked_registration_invite_only: false
+
+########################################################################
 # Network
 ########################################################################
 
