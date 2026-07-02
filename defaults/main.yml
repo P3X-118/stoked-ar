@@ -76,6 +76,20 @@ stoked_oidc_scopes: "openid profile email"
 stoked_oidc_redirect_uri: "{{ stoked_scheme }}://{{ stoked_hostname }}/api/auth/oidc/callback"
 
 ########################################################################
+# pds-pro session broker (in-chat Bluesky)
+########################################################################
+# When stoked_pds_pro_enabled is true, [api.pds_pro] is rendered into Revolt.toml
+# and delta offers GET /auth/atproto/session, which calls the internal pds-pro
+# broker server-to-server to mint the chat user's own atproto session (so the SPA
+# can embed their Bluesky feed). base_url must reach pds-pro host-internally over
+# the shared docker network (never public); broker_secret is shared with pds-pro
+# (sgc_pgsk salt 'pds.pro.broker') — leave the placeholders empty here and set
+# the real values in SGC host_vars.
+stoked_pds_pro_enabled: false
+stoked_pds_pro_base_url: ""
+stoked_pds_pro_broker_secret: ""
+
+########################################################################
 # Network
 ########################################################################
 

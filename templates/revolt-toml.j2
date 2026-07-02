@@ -34,6 +34,16 @@ client_secret = "{{ stoked_oidc_client_secret }}"
 scopes = "{{ stoked_oidc_scopes | default('openid profile email') }}"
 redirect_uri = "{{ stoked_oidc_redirect_uri }}"
 {% endif %}
+{% if stoked_pds_pro_enabled | default(false) %}
+
+[api.pds_pro]
+# Internal pds-pro session broker for embedding the user's Bluesky in chat.
+# base_url is reached host-internally over the shared docker network (never
+# public); broker_secret is shared with pds-pro (sgc_pgsk salt 'pds.pro.broker').
+enabled = true
+base_url = "{{ stoked_pds_pro_base_url }}"
+broker_secret = "{{ stoked_pds_pro_broker_secret }}"
+{% endif %}
 
 [hosts]
 app = "{{ stoked_scheme }}://{{ stoked_hostname }}"
